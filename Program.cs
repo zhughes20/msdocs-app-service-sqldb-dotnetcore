@@ -1,9 +1,22 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights; // Add this using directive
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Application Insights telemetry
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+    options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+});
+
+// Register TelemetryClient
+builder.Services.AddSingleton<TelemetryClient>();
+
 // Add database context and cache
-if(builder.Environment.IsDevelopment())
+if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<MyDatabaseContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("MyDbConnection")));
@@ -15,11 +28,10 @@ else
         options.UseSqlServer(builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")));
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-    options.Configuration = builder.Configuration["AZURE_REDIS_CONNECTIONSTRING"];
-    options.InstanceName = "SampleInstance";
+        options.Configuration = builder.Configuration["AZURE_REDIS_CONNECTIONSTRING"];
+        options.InstanceName = "SampleInstance";
     });
 }
-
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -38,14 +50,3 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Todos}/{action=Index}/{id?}");
-
-app.Run();
